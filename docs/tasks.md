@@ -13,6 +13,10 @@
 
 - [ ] 2. Create core application architecture and main process
 
+
+
+
+
   - Implement Electron main process with window management and IPC setup
   - Create basic application window with Monaco Editor integration
   - Set up TypeScript interfaces for core data models (HomewardConfig, Project, Spec)

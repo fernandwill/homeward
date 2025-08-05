@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useAppStore } from '../stores/appStore'
+import { showError, showSuccess } from '../stores/notificationStore'
 import MonacoEditor from './MonacoEditor'
 import EditorTabs from './EditorTabs'
 
@@ -22,9 +23,13 @@ const Editor: React.FC = () => {
     try {
       await window.electronAPI.writeFile(activeFilePath, activeFile.content)
       markFileDirty(activeFilePath, false)
+      showSuccess('File saved', `Successfully saved ${activeFile.name}`)
+      
+      // Update workspace open files
+      await window.electronAPI.addOpenFile(activeFilePath)
     } catch (error) {
       console.error('Failed to save file:', error)
-      // TODO: Show error notification
+      showError('Failed to save file', error instanceof Error ? error.message : 'Unknown error')
     } finally {
       setIsLoading(false)
     }
@@ -58,9 +63,15 @@ const Editor: React.FC = () => {
       const { openFile, setActiveFile } = useAppStore.getState()
       openFile(filePath, content, language)
       setActiveFile(filePath)
+      
+      // Update workspace open files
+      await window.electronAPI.addOpenFile(filePath)
+      await window.electronAPI.setActiveFile(filePath)
+      
+      showSuccess('File opened', `Successfully opened ${filePath.split(/[/\\]/).pop()}`)
     } catch (error) {
       console.error('Failed to open file:', error)
-      // TODO: Show error notification
+      showError('Failed to open file', error instanceof Error ? error.message : 'Unknown error')
     } finally {
       setIsLoading(false)
     }

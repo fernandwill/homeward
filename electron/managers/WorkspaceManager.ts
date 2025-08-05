@@ -1,5 +1,5 @@
 import { promises as fs } from 'fs'
-import { join, basename, relative } from 'path'
+import { join, basename, relative, dirname } from 'path'
 import { watch, FSWatcher } from 'chokidar'
 import { app } from 'electron'
 
@@ -140,6 +140,154 @@ export class WorkspaceManager {
     } else {
       this.workspaceConfig.expandedFolders.push(folderPath)
     }
+  }
+
+  public async updateWorkspaceSettings(settings: Record<string, any>): Promise<void> {
+    if (!this.workspaceConfig) return
+
+    this.workspaceConfig.settings = { ...this.workspaceConfig.settings, ...settings }
+    await this.saveWorkspaceConfig()
+  }
+
+  public async saveWorkspaceConfig(): Promise<void> {
+    if (!this.currentWorkspacePath || !this.workspaceConfig) return
+
+    try {
+      const configDir = join(this.currentWorkspacePath, '.homeward')
+      const configPath = join(configDir, 'workspace.json')
+      
+      await fs.mkdir(configDir, { recursive: true })
+      await fs.writeFile(configPath, JSON.stringify(this.workspaceConfig, null, 2))
+    } catch (error) {
+      console.error('Failed to save workspace config:', error)
+    }
+  }
+
+  public async createFileInWorkspace(relativePath: string, content: string = ''): Promise<void> {
+    if (!this.currentWorkspacePath) {
+      throw new Error('No workspace is currently open')
+    }
+
+    const fullPath = join(this.currentWorkspacePath, relativePath)
+    const dir = dirname(fullPath)
+    
+    try {
+      await fs.mkdir(dir, { recursive: true })
+      await fs.writeFile(fullPath, content, 'utf-8')
+      
+      // Refresh file tree to show the new file
+      await this.refreshFileTree()
+    } catch (error) {
+      throw new Error(`Failed to create file: ${error}`)
+    }
+  }
+
+  public async createDirectoryInWorkspace(relativePath: string): Promise<void> {
+    if (!this.currentWorkspacePath) {
+      throw new Error('No workspace is currently open')
+    }
+
+    const fullPath = join(this.currentWorkspacePath, relativePath)
+    
+    try {
+      await fs.mkdir(fullPath, { recursive: true })
+      
+      // Refresh file tree to show the new directory
+      await this.refreshFileTree()
+    } catch (error) {
+      throw new Error(`Failed to create directory: ${error}`)
+    }
+  }
+
+  public async deleteFileInWorkspace(relativePath: string): Promise<void> {
+    if (!this.currentWorkspacePath) {
+      throw new Error('No workspace is currently open')
+    }
+
+    const fullPath = join(this.currentWorkspacePath, relativePath)
+    
+    try {
+      const stats = await fs.stat(fullPath)
+      if (stats.isDirectory()) {
+        await fs.rmdir(fullPath, { recursive: true })
+      } else {
+        await fs.unlink(fullPath)
+      }
+      
+      // Remove from open files if it was open
+      this.removeOpenFile(fullPath)
+      
+      // Refresh file tree to reflect the deletion
+      await this.refreshFileTree()
+    } catch (error) {
+      throw new Error(`Failed to delete file: ${error}`)
+    }
+  }
+
+  public async renameFileInWorkspace(oldRelativePath: string, newRelativePath: string): Promise<void> {
+    if (!this.currentWorkspacePath) {
+      throw new Error('No workspace is currently open')
+    }
+
+    const oldFullPath = join(this.currentWorkspacePath, oldRelativePath)
+    const newFullPath = join(this.currentWorkspacePath, newRelativePath)
+    
+    try {
+      // Ensure the destination directory exists
+      const newDir = dirname(newFullPath)
+      await fs.mkdir(newDir, { recursive: true })
+      
+      await fs.rename(oldFullPath, newFullPath)
+      
+      // Update open files list if the file was open
+      if (this.workspaceConfig?.openFiles.includes(oldFullPath)) {
+        this.removeOpenFile(oldFullPath)
+        this.addOpenFile(newFullPath)
+        
+        // Update active file if it was the renamed file
+        if (this.workspaceConfig.activeFile === oldFullPath) {
+          this.workspaceConfig.activeFile = newFullPath
+        }
+      }
+      
+      // Refresh file tree to reflect the rename
+      await this.refreshFileTree()
+    } catch (error) {
+      throw new Error(`Failed to rename file: ${error}`)
+    }
+  }
+
+  public getWorkspaceStats(): {
+    totalFiles: number
+    totalDirectories: number
+    openFiles: number
+    lastModified?: Date
+  } {
+    const stats = {
+      totalFiles: 0,
+      totalDirectories: 0,
+      openFiles: this.workspaceConfig?.openFiles.length || 0,
+      lastModified: undefined as Date | undefined
+    }
+
+    const countNodes = (nodes: FileNode[]) => {
+      for (const node of nodes) {
+        if (node.type === 'file') {
+          stats.totalFiles++
+          if (node.modified && (!stats.lastModified || node.modified > stats.lastModified)) {
+            stats.lastModified = node.modified
+          }
+        } else {
+          stats.totalDirectories++
+          if (node.children) {
+            countNodes(node.children)
+          }
+        }
+      }
+    }
+
+    countNodes(this.fileTree)
+    return stats
   }
 
   private async buildFileTree(dirPath: string, maxDepth: number = 3, currentDepth: number = 0): Promise<FileNode[]> {

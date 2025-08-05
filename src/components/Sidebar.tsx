@@ -1,10 +1,15 @@
 import React, { useEffect, useState } from 'react'
 import { useAppStore } from '../stores/appStore'
+import { showError, showSuccess } from '../stores/notificationStore'
+import { WorkspaceStats } from '../types/electron'
 import FileTree from './FileTree'
+import InputDialog from './InputDialog'
 
 const Sidebar: React.FC = () => {
   const { workspaceConfig, fileTree, setWorkspace, setFileTree, showSidebar, sidebarWidth } = useAppStore()
   const [isLoading, setIsLoading] = useState(false)
+  const [workspaceStats, setWorkspaceStats] = useState<WorkspaceStats | null>(null)
+  const [showNewFileDialog, setShowNewFileDialog] = useState(false)
 
   useEffect(() => {
     // Load initial workspace and file tree
@@ -28,20 +33,24 @@ const Sidebar: React.FC = () => {
       const workspacePath = await window.electronAPI.getCurrentWorkspacePath()
       
       if (workspacePath) {
-        // Load workspace config and file tree
-        const [config, tree] = await Promise.all([
+        // Load workspace config, file tree, and stats
+        const [config, tree, stats] = await Promise.all([
           window.electronAPI.openWorkspace(workspacePath),
-          window.electronAPI.getFileTree()
+          window.electronAPI.getFileTree(),
+          window.electronAPI.getWorkspaceStats()
         ])
         
         setWorkspace(config)
         setFileTree(tree)
+        setWorkspaceStats(stats)
       } else {
         setWorkspace(null)
         setFileTree([])
+        setWorkspaceStats(null)
       }
     } catch (error) {
       console.error('Failed to load workspace data:', error)
+      showError('Failed to load workspace', error instanceof Error ? error.message : 'Unknown error')
     } finally {
       setIsLoading(false)
     }
@@ -76,10 +85,7 @@ const Sidebar: React.FC = () => {
             <button
               className="w-6 h-6 flex items-center justify-center rounded hover:bg-vscode-border"
               title="New File"
-              onClick={() => {
-                // TODO: Implement new file creation
-                console.log('New file')
-              }}
+              onClick={() => setShowNewFileDialog(true)}
             >
               <span className="text-xs text-vscode-text-muted">+</span>
             </button>
@@ -106,6 +112,21 @@ const Sidebar: React.FC = () => {
             <div className="p-2 text-xs font-semibold text-vscode-text uppercase tracking-wide">
               {workspaceConfig.name}
             </div>
+            
+            {/* Workspace Stats */}
+            {workspaceStats && (
+              <div className="px-2 pb-2 text-xs text-vscode-text-muted">
+                <div className="flex justify-between">
+                  <span>{workspaceStats.totalFiles} files</span>
+                  <span>{workspaceStats.totalDirectories} folders</span>
+                </div>
+                {workspaceStats.openFiles > 0 && (
+                  <div className="mt-1">
+                    {workspaceStats.openFiles} open
+                  </div>
+                )}
+              </div>
+            )}
             
             {/* File Tree */}
             <FileTree nodes={fileTree} />
@@ -159,6 +180,25 @@ const Sidebar: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* New File Dialog */}
+      <InputDialog
+        title="Create New File"
+        placeholder="Enter file name..."
+        type="file"
+        visible={showNewFileDialog}
+        onConfirm={async (fileName) => {
+          try {
+            await window.electronAPI.createFileInWorkspace(fileName)
+            await loadWorkspaceData()
+            showSuccess('File created', `Successfully created ${fileName}`)
+            setShowNewFileDialog(false)
+          } catch (error) {
+            showError('Failed to create file', error instanceof Error ? error.message : 'Unknown error')
+          }
+        }}
+        onCancel={() => setShowNewFileDialog(false)}
+      />
     </div>
   )
 }

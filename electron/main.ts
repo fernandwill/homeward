@@ -268,15 +268,99 @@ ipcMain.handle('fs:exists', async (_, filePath: string) => {
   return await fileSystemManager.exists(filePath)
 })
 
+ipcMain.handle('fs:getFileInfo', async (_, filePath: string) => {
+  return await fileSystemManager.getFileInfo(filePath)
+})
+
+ipcMain.handle('fs:createFile', async (_, filePath: string, content?: string) => {
+  return await fileSystemManager.createFile(filePath, content)
+})
+
+ipcMain.handle('fs:createDirectory', async (_, dirPath: string) => {
+  return await fileSystemManager.createDirectory(dirPath)
+})
+
+ipcMain.handle('fs:deleteFile', async (_, filePath: string) => {
+  return await fileSystemManager.deleteFile(filePath)
+})
+
+ipcMain.handle('fs:copyFile', async (_, sourcePath: string, destinationPath: string) => {
+  return await fileSystemManager.copyFile(sourcePath, destinationPath)
+})
+
+ipcMain.handle('fs:moveFile', async (_, sourcePath: string, destinationPath: string) => {
+  return await fileSystemManager.moveFile(sourcePath, destinationPath)
+})
+
+ipcMain.handle('fs:getRecentFiles', async () => {
+  return fileSystemManager.getRecentFiles()
+})
+
 // Workspace operations
 ipcMain.handle('workspace:open', async (_, workspacePath: string) => {
   return await workspaceManager.openWorkspace(workspacePath)
+})
+
+ipcMain.handle('workspace:close', async () => {
+  return await workspaceManager.closeWorkspace()
 })
 
 ipcMain.handle('workspace:getFileTree', async () => {
   return await workspaceManager.getFileTree()
 })
 
+ipcMain.handle('workspace:refreshFileTree', async () => {
+  return await workspaceManager.refreshFileTree()
+})
+
 ipcMain.handle('workspace:getCurrentPath', () => {
   return workspaceManager.getCurrentWorkspacePath()
+})
+
+ipcMain.handle('workspace:getConfig', () => {
+  return workspaceManager.getWorkspaceConfig()
+})
+
+ipcMain.handle('workspace:addOpenFile', async (_, filePath: string) => {
+  workspaceManager.addOpenFile(filePath)
+  return await workspaceManager.saveWorkspaceConfig()
+})
+
+ipcMain.handle('workspace:removeOpenFile', async (_, filePath: string) => {
+  workspaceManager.removeOpenFile(filePath)
+  return await workspaceManager.saveWorkspaceConfig()
+})
+
+ipcMain.handle('workspace:setActiveFile', async (_, filePath: string) => {
+  workspaceManager.setActiveFile(filePath)
+  return await workspaceManager.saveWorkspaceConfig()
+})
+
+ipcMain.handle('workspace:toggleFolderExpansion', async (_, folderPath: string) => {
+  workspaceManager.toggleFolderExpansion(folderPath)
+  return await workspaceManager.saveWorkspaceConfig()
+})
+
+ipcMain.handle('workspace:updateSettings', async (_, settings: Record<string, any>) => {
+  return await workspaceManager.updateWorkspaceSettings(settings)
+})
+
+ipcMain.handle('workspace:createFile', async (_, relativePath: string, content?: string) => {
+  return await workspaceManager.createFileInWorkspace(relativePath, content)
+})
+
+ipcMain.handle('workspace:createDirectory', async (_, relativePath: string) => {
+  return await workspaceManager.createDirectoryInWorkspace(relativePath)
+})
+
+ipcMain.handle('workspace:deleteFile', async (_, relativePath: string) => {
+  return await workspaceManager.deleteFileInWorkspace(relativePath)
+})
+
+ipcMain.handle('workspace:renameFile', async (_, oldRelativePath: string, newRelativePath: string) => {
+  return await workspaceManager.renameFileInWorkspace(oldRelativePath, newRelativePath)
+})
+
+ipcMain.handle('workspace:getStats', () => {
+  return workspaceManager.getWorkspaceStats()
 })

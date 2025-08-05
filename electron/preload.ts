@@ -17,11 +17,31 @@ contextBridge.exposeInMainWorld('electronAPI', {
   readFile: (filePath: string) => ipcRenderer.invoke('fs:readFile', filePath),
   writeFile: (filePath: string, content: string) => ipcRenderer.invoke('fs:writeFile', filePath, content),
   fileExists: (filePath: string) => ipcRenderer.invoke('fs:exists', filePath),
+  getFileInfo: (filePath: string) => ipcRenderer.invoke('fs:getFileInfo', filePath),
+  createFile: (filePath: string, content?: string) => ipcRenderer.invoke('fs:createFile', filePath, content),
+  createDirectory: (dirPath: string) => ipcRenderer.invoke('fs:createDirectory', dirPath),
+  deleteFile: (filePath: string) => ipcRenderer.invoke('fs:deleteFile', filePath),
+  copyFile: (sourcePath: string, destinationPath: string) => ipcRenderer.invoke('fs:copyFile', sourcePath, destinationPath),
+  moveFile: (sourcePath: string, destinationPath: string) => ipcRenderer.invoke('fs:moveFile', sourcePath, destinationPath),
+  getRecentFiles: () => ipcRenderer.invoke('fs:getRecentFiles'),
   
   // Workspace operations
   openWorkspace: (workspacePath: string) => ipcRenderer.invoke('workspace:open', workspacePath),
+  closeWorkspace: () => ipcRenderer.invoke('workspace:close'),
   getFileTree: () => ipcRenderer.invoke('workspace:getFileTree'),
+  refreshFileTree: () => ipcRenderer.invoke('workspace:refreshFileTree'),
   getCurrentWorkspacePath: () => ipcRenderer.invoke('workspace:getCurrentPath'),
+  getWorkspaceConfig: () => ipcRenderer.invoke('workspace:getConfig'),
+  addOpenFile: (filePath: string) => ipcRenderer.invoke('workspace:addOpenFile', filePath),
+  removeOpenFile: (filePath: string) => ipcRenderer.invoke('workspace:removeOpenFile', filePath),
+  setActiveFile: (filePath: string) => ipcRenderer.invoke('workspace:setActiveFile', filePath),
+  toggleFolderExpansion: (folderPath: string) => ipcRenderer.invoke('workspace:toggleFolderExpansion', folderPath),
+  updateWorkspaceSettings: (settings: Record<string, any>) => ipcRenderer.invoke('workspace:updateSettings', settings),
+  createFileInWorkspace: (relativePath: string, content?: string) => ipcRenderer.invoke('workspace:createFile', relativePath, content),
+  createDirectoryInWorkspace: (relativePath: string) => ipcRenderer.invoke('workspace:createDirectory', relativePath),
+  deleteFileInWorkspace: (relativePath: string) => ipcRenderer.invoke('workspace:deleteFile', relativePath),
+  renameFileInWorkspace: (oldRelativePath: string, newRelativePath: string) => ipcRenderer.invoke('workspace:renameFile', oldRelativePath, newRelativePath),
+  getWorkspaceStats: () => ipcRenderer.invoke('workspace:getStats'),
   
   // Event listeners
   onMenuAction: (callback: (action: string, data?: any) => void) => {
