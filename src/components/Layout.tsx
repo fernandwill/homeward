@@ -1,7 +1,7 @@
 import React from 'react'
 import TitleBar from './TitleBar'
 import Sidebar from './Sidebar'
-import Editor from './Editor'
+import EditorContainer from './EditorContainer'
 import StatusBar from './StatusBar'
 
 const Layout: React.FC = () => {
@@ -11,7 +11,7 @@ const Layout: React.FC = () => {
       <div className="flex-1 flex">
         <Sidebar />
         <div className="flex-1 flex flex-col">
-          <Editor />
+          <EditorContainer />
           <StatusBar />
         </div>
       </div>

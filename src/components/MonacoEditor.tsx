@@ -1,5 +1,6 @@
-import React, { useRef, useEffect, useState } from 'react'
+import React, { useRef, useEffect, useState, useCallback } from 'react'
 import * as monaco from 'monaco-editor'
+import { initializeLanguageConfig } from '../utils/languageConfig'
 
 interface MonacoEditorProps {
   value: string
@@ -9,6 +10,15 @@ interface MonacoEditorProps {
   theme?: string
   readOnly?: boolean
   filePath?: string
+  onCursorPositionChange?: (line: number, column: number) => void
+  onEditorReady?: (editor: monaco.editor.IStandaloneCodeEditor) => void
+}
+
+interface EditorAction {
+  id: string
+  label: string
+  keybinding?: number
+  run: (editor: monaco.editor.IStandaloneCodeEditor) => void
 }
 
 const MonacoEditor: React.FC<MonacoEditorProps> = ({
@@ -19,12 +29,87 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
   theme = 'vs-dark',
   readOnly = false,
   filePath,
+  onCursorPositionChange,
+  onEditorReady,
 }) => {
   const editorRef = useRef<HTMLDivElement>(null)
   const [editor, setEditor] = useState<monaco.editor.IStandaloneCodeEditor | null>(null)
 
+  // Custom editor actions
+  const getCustomActions = useCallback((): EditorAction[] => [
+    {
+      id: 'homeward.action.quickOpen',
+      label: 'Quick Open File',
+      keybinding: monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyP,
+      run: (editor) => {
+        // TODO: Implement quick open functionality
+        console.log('Quick Open triggered')
+      }
+    },
+    {
+      id: 'homeward.action.commandPalette',
+      label: 'Command Palette',
+      keybinding: monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyP,
+      run: (editor) => {
+        // TODO: Implement command palette
+        console.log('Command Palette triggered')
+      }
+    },
+    {
+      id: 'homeward.action.goToLine',
+      label: 'Go to Line',
+      keybinding: monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyG,
+      run: (editor) => {
+        editor.getAction('editor.action.gotoLine')?.run()
+      }
+    },
+    {
+      id: 'homeward.action.find',
+      label: 'Find',
+      keybinding: monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyF,
+      run: (editor) => {
+        editor.getAction('actions.find')?.run()
+      }
+    },
+    {
+      id: 'homeward.action.replace',
+      label: 'Replace',
+      keybinding: monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyH,
+      run: (editor) => {
+        editor.getAction('editor.action.startFindReplaceAction')?.run()
+      }
+    },
+    {
+      id: 'homeward.action.formatDocument',
+      label: 'Format Document',
+      keybinding: monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyF,
+      run: (editor) => {
+        editor.getAction('editor.action.formatDocument')?.run()
+      }
+    },
+    {
+      id: 'homeward.action.toggleComment',
+      label: 'Toggle Comment',
+      keybinding: monaco.KeyMod.CtrlCmd | monaco.KeyCode.Slash,
+      run: (editor) => {
+        editor.getAction('editor.action.commentLine')?.run()
+      }
+    },
+    {
+      id: 'homeward.action.duplicateLine',
+      label: 'Duplicate Line',
+      keybinding: monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyD,
+      run: (editor) => {
+        editor.getAction('editor.action.copyLinesDownAction')?.run()
+      }
+    }
+  ], [])
+
   useEffect(() => {
     if (!editorRef.current) return
+
+    // Initialize language configurations
+    initializeLanguageConfig()
 
     // Configure Monaco Editor
     monaco.editor.defineTheme('homeward-dark', {
@@ -80,10 +165,18 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
 
     setEditor(editorInstance)
 
+    // Notify parent component that editor is ready
+    onEditorReady?.(editorInstance)
+
     // Handle content changes
     const disposable = editorInstance.onDidChangeModelContent(() => {
       const currentValue = editorInstance.getValue()
       onChange?.(currentValue)
+    })
+
+    // Handle cursor position changes
+    const cursorDisposable = editorInstance.onDidChangeCursorPosition((e) => {
+      onCursorPositionChange?.(e.position.lineNumber, e.position.column)
     })
 
     // Handle save shortcut
@@ -94,10 +187,57 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
       }
     )
 
+    // Register custom actions
+    const actionDisposables = getCustomActions().map(action => {
+      return editorInstance.addAction({
+        id: action.id,
+        label: action.label,
+        keybindings: action.keybinding ? [action.keybinding] : undefined,
+        run: () => action.run(editorInstance)
+      })
+    })
+
+    // Enhanced editor features
+    const setupEnhancedFeatures = () => {
+      // Enable bracket matching
+      editorInstance.updateOptions({
+        matchBrackets: 'always',
+        renderLineHighlight: 'all',
+        renderIndentGuides: true,
+        highlightActiveIndentGuide: true,
+        occurrencesHighlight: true,
+        selectionHighlight: true,
+        codeLens: true,
+        colorDecorators: true,
+        lightbulb: { enabled: true },
+        quickSuggestions: {
+          other: true,
+          comments: false,
+          strings: false
+        },
+        suggestOnTriggerCharacters: true,
+        acceptSuggestionOnEnter: 'on',
+        acceptSuggestionOnCommitCharacter: true,
+        snippetSuggestions: 'top',
+        wordBasedSuggestions: true,
+        parameterHints: { enabled: true },
+        hover: { enabled: true },
+        links: true,
+        find: {
+          seedSearchStringFromSelection: 'always',
+          autoFindInSelection: 'never'
+        }
+      })
+    }
+
+    setupEnhancedFeatures()
+
     // Cleanup
     return () => {
       disposable.dispose()
+      cursorDisposable.dispose()
       saveDisposable?.dispose()
+      actionDisposables.forEach(d => d?.dispose())
       editorInstance.dispose()
     }
   }, [])
