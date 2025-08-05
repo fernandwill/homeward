@@ -8,6 +8,9 @@
   - Set up development scripts for hot reload and debugging
   - _Requirements: 1.1, 1.2_
 
+
+
+
 - [ ] 2. Create core application architecture and main process
 
   - Implement Electron main process with window management and IPC setup
