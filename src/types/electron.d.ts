@@ -44,7 +44,18 @@ export interface ElectronAPI {
   onWindowStateChange: (callback: (state: string) => void) => () => void
   
   // LLM operations
-  sendLLMRequest: (provider: string, message: string, context?: any) => Promise<AsyncGenerator<string>>
+  getProviders: () => Promise<LLMProviderConfig[]>
+  getProvider: (name: string) => Promise<LLMProviderConfig | undefined>
+  updateProvider: (name: string, config: any) => Promise<boolean>
+  addProvider: (config: any) => Promise<void>
+  removeProvider: (name: string) => Promise<boolean>
+  getActiveProvider: () => Promise<string | null>
+  setActiveProvider: (name: string) => Promise<boolean>
+  getEnabledProviders: () => Promise<LLMProviderConfig[]>
+  checkProviderStatus: (name: string) => Promise<{ available: boolean; error?: string }>
+  validateApiKey: (providerName: string, apiKey: string) => Promise<boolean>
+  getProviderModels: (providerName: string) => Promise<any[]>
+  refreshOllamaModels: () => Promise<void>
 }
 
 export interface FileNode {
@@ -79,6 +90,31 @@ export interface WorkspaceStats {
   totalDirectories: number
   openFiles: number
   lastModified?: Date
+}
+
+export interface LLMProviderConfig {
+  name: string
+  displayName: string
+  apiKey: string
+  baseUrl?: string
+  models: LLMModel[]
+  enabled: boolean
+  temperature?: number
+  timeout?: number
+  retryAttempts?: number
+}
+
+export interface LLMModel {
+  id: string
+  name: string
+  contextWindow: number
+  maxTokens: number
+  supportsStreaming: boolean
+  supportsImages?: boolean
+  costPer1kTokens?: {
+    input: number
+    output: number
+  }
 }
 
 declare global {

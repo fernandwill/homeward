@@ -4,11 +4,13 @@ import { isDev } from './utils/env'
 import { WindowManager } from './managers/WindowManager'
 import { FileSystemManager } from './managers/FileSystemManager'
 import { WorkspaceManager } from './managers/WorkspaceManager'
+import { LLMManager } from './managers/LLMManager'
 
 let mainWindow: BrowserWindow | null = null
 let windowManager: WindowManager
 let fileSystemManager: FileSystemManager
 let workspaceManager: WorkspaceManager
+let llmManager: LLMManager
 
 const createWindow = () => {
   mainWindow = new BrowserWindow({
@@ -36,6 +38,7 @@ const createWindow = () => {
   windowManager = new WindowManager(mainWindow)
   fileSystemManager = new FileSystemManager()
   workspaceManager = new WorkspaceManager()
+  llmManager = new LLMManager()
 
   // Load the app
   if (isDev) {
@@ -363,4 +366,53 @@ ipcMain.handle('workspace:renameFile', async (_, oldRelativePath: string, newRel
 
 ipcMain.handle('workspace:getStats', () => {
   return workspaceManager.getWorkspaceStats()
+})
+
+// LLM operations
+ipcMain.handle('llm:getProviders', () => {
+  return llmManager.getProviders()
+})
+
+ipcMain.handle('llm:getProvider', async (_, name: string) => {
+  return llmManager.getProvider(name)
+})
+
+ipcMain.handle('llm:updateProvider', async (_, name: string, config: any) => {
+  return await llmManager.updateProvider(name, config)
+})
+
+ipcMain.handle('llm:addProvider', async (_, config: any) => {
+  return await llmManager.addProvider(config)
+})
+
+ipcMain.handle('llm:removeProvider', async (_, name: string) => {
+  return await llmManager.removeProvider(name)
+})
+
+ipcMain.handle('llm:getActiveProvider', () => {
+  return llmManager.getActiveProvider()
+})
+
+ipcMain.handle('llm:setActiveProvider', async (_, name: string) => {
+  return await llmManager.setActiveProvider(name)
+})
+
+ipcMain.handle('llm:getEnabledProviders', () => {
+  return llmManager.getEnabledProviders()
+})
+
+ipcMain.handle('llm:checkProviderStatus', async (_, name: string) => {
+  return await llmManager.checkProviderStatus(name)
+})
+
+ipcMain.handle('llm:validateApiKey', async (_, providerName: string, apiKey: string) => {
+  return await llmManager.validateApiKey(providerName, apiKey)
+})
+
+ipcMain.handle('llm:getProviderModels', (_, providerName: string) => {
+  return llmManager.getProviderModels(providerName)
+})
+
+ipcMain.handle('llm:refreshOllamaModels', async () => {
+  return await llmManager.refreshOllamaModels()
 })

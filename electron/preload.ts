@@ -84,7 +84,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
     }
   },
   
-  // LLM operations (to be implemented in future tasks)
-  sendLLMRequest: (provider: string, message: string, context?: any) => 
-    ipcRenderer.invoke('llm:sendRequest', provider, message, context),
+  // LLM operations
+  getProviders: () => ipcRenderer.invoke('llm:getProviders'),
+  getProvider: (name: string) => ipcRenderer.invoke('llm:getProvider', name),
+  updateProvider: (name: string, config: any) => ipcRenderer.invoke('llm:updateProvider', name, config),
+  addProvider: (config: any) => ipcRenderer.invoke('llm:addProvider', config),
+  removeProvider: (name: string) => ipcRenderer.invoke('llm:removeProvider', name),
+  getActiveProvider: () => ipcRenderer.invoke('llm:getActiveProvider'),
+  setActiveProvider: (name: string) => ipcRenderer.invoke('llm:setActiveProvider', name),
+  getEnabledProviders: () => ipcRenderer.invoke('llm:getEnabledProviders'),
+  checkProviderStatus: (name: string) => ipcRenderer.invoke('llm:checkProviderStatus', name),
+  validateApiKey: (providerName: string, apiKey: string) => ipcRenderer.invoke('llm:validateApiKey', providerName, apiKey),
+  getProviderModels: (providerName: string) => ipcRenderer.invoke('llm:getProviderModels', providerName),
+  refreshOllamaModels: () => ipcRenderer.invoke('llm:refreshOllamaModels'),
 })
