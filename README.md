@@ -41,14 +41,21 @@ homeward/
 
 ## Getting Started
 
-This project is currently in the planning phase. The implementation will follow the tasks outlined in `docs/tasks.md`.
-
-### Development Setup (Coming Soon)
+### Development Setup
 
 1. Clone the repository
-2. Install dependencies: `pnpm install`
-3. Start development server: `pnpm dev`
-4. Build for production: `pnpm build`
+2. Install pnpm if you haven't already: `npm install -g pnpm`
+3. Run the setup script: `node scripts/setup.js`
+4. Start development server: `pnpm dev`
+5. Build for production: `pnpm build`
+
+### Available Scripts
+
+- `pnpm dev` - Start development server (Vite + Electron)
+- `pnpm build` - Build the application
+- `pnpm build:dist` - Build and package for distribution
+- `pnpm lint` - Run ESLint
+- `pnpm type-check` - Run TypeScript type checking
 
 ## Documentation
 
