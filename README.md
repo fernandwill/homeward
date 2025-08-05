@@ -69,4 +69,4 @@ This project is for personal use.
 
 ## Status
 
-🚧 **In Development** - Currently in planning and design phase
+**In Development** - Currently in planning and design phase
