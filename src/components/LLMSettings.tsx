@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { LLMProviderConfig, LLMModel } from '../types/electron'
 import { showError, showSuccess } from '../stores/notificationStore'
+import SecurityInfoComponent from './SecurityInfo'
 
 interface LLMSettingsProps {
   visible: boolean
@@ -13,6 +14,7 @@ const LLMSettings: React.FC<LLMSettingsProps> = ({ visible, onClose }) => {
   const [selectedProvider, setSelectedProvider] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [providerStatuses, setProviderStatuses] = useState<Record<string, { available: boolean; error?: string }>>({})
+  const [showSecurityInfo, setShowSecurityInfo] = useState(false)
 
   useEffect(() => {
     if (visible) {
@@ -94,14 +96,17 @@ const LLMSettings: React.FC<LLMSettingsProps> = ({ visible, onClose }) => {
     try {
       setIsLoading(true)
       
-      // Validate the API key first
-      const isValid = await window.electronAPI.validateApiKey(providerName, apiKey)
-      if (!isValid) {
-        showError('Invalid API key', 'The provided API key is not valid')
+      // Use the secure validation and storage method
+      const result = await window.electronAPI.validateAndStoreApiKey(providerName, apiKey)
+      
+      if (!result.valid) {
+        showError('Invalid API key', result.error || 'The provided API key is not valid')
         return
       }
 
-      await window.electronAPI.updateProvider(providerName, { apiKey })
+      if (result.error) {
+        showError('API key validation warning', result.error)
+      }
       
       setProviders(prev => prev.map(p => 
         p.name === providerName ? { ...p, apiKey } : p
@@ -111,7 +116,7 @@ const LLMSettings: React.FC<LLMSettingsProps> = ({ visible, onClose }) => {
       const status = await window.electronAPI.checkProviderStatus(providerName)
       setProviderStatuses(prev => ({ ...prev, [providerName]: status }))
       
-      showSuccess('API key updated', `${providers.find(p => p.name === providerName)?.displayName} API key saved`)
+      showSuccess('API key saved securely', `${providers.find(p => p.name === providerName)?.displayName} API key stored in secure storage`)
     } catch (error) {
       showError('Failed to update API key', error instanceof Error ? error.message : 'Unknown error')
     } finally {
@@ -142,12 +147,21 @@ const LLMSettings: React.FC<LLMSettingsProps> = ({ visible, onClose }) => {
         <div className="p-6 border-b border-vscode-border">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold text-vscode-text">LLM Provider Settings</h2>
-            <button
-              onClick={onClose}
-              className="text-vscode-text-muted hover:text-vscode-text text-2xl"
-            >
-              ×
-            </button>
+            <div className="flex items-center space-x-3">
+              <button
+                onClick={() => setShowSecurityInfo(true)}
+                className="px-3 py-1 text-sm bg-vscode-border text-vscode-text rounded hover:bg-vscode-sidebar transition-colors"
+                title="View security information"
+              >
+                🔒 Security Info
+              </button>
+              <button
+                onClick={onClose}
+                className="text-vscode-text-muted hover:text-vscode-text text-2xl"
+              >
+                ×
+              </button>
+            </div>
           </div>
         </div>
 
@@ -320,6 +334,12 @@ const LLMSettings: React.FC<LLMSettingsProps> = ({ visible, onClose }) => {
           </div>
         </div>
       </div>
+
+      {/* Security Info Modal */}
+      <SecurityInfoComponent
+        visible={showSecurityInfo}
+        onClose={() => setShowSecurityInfo(false)}
+      />
     </div>
   )
 }

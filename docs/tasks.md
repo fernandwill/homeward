@@ -31,6 +31,10 @@
 
 - [ ] 3. Implement basic file system operations and workspace management
 
+
+
+
+
   - Create WorkspaceManager class with file tree generation and file watching
   - Implement file operations (open, save, create, delete) with proper error handling
   - Add workspace state persistence and restoration functionality

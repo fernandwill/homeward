@@ -1,6 +1,7 @@
 import { app } from 'electron'
 import { join } from 'path'
 import { promises as fs } from 'fs'
+import { CredentialManager } from './CredentialManager'
 
 // Import the LLM system from the renderer process types
 interface LLMProviderConfig {
@@ -39,10 +40,12 @@ export class LLMManager {
   private configPath: string
   private providers: Map<string, LLMProviderConfig> = new Map()
   private activeProvider: string | null = null
+  private credentialManager: CredentialManager
 
   constructor() {
     const userDataPath = app.getPath('userData')
     this.configPath = join(userDataPath, 'llm-config.json')
+    this.credentialManager = CredentialManager.getInstance()
     this.loadConfig()
   }
 
@@ -60,7 +63,9 @@ export class LLMManager {
         if (config.providers && Array.isArray(config.providers)) {
           this.providers.clear()
           for (const provider of config.providers) {
-            this.providers.set(provider.name, provider)
+            // Load API key from secure storage
+            const apiKey = await this.credentialManager.getLLMApiKey(provider.name) || ''
+            this.providers.set(provider.name, { ...provider, apiKey })
           }
         }
       } else {
@@ -75,9 +80,23 @@ export class LLMManager {
 
   public async saveConfig(): Promise<void> {
     try {
+      // Save API keys to secure storage and remove them from config
+      const providersForConfig = []
+      
+      for (const provider of this.providers.values()) {
+        // Store API key securely if it exists
+        if (provider.apiKey) {
+          await this.credentialManager.storeLLMApiKey(provider.name, provider.apiKey)
+        }
+        
+        // Create config without API key
+        const { apiKey, ...providerWithoutKey } = provider
+        providersForConfig.push(providerWithoutKey)
+      }
+
       const config = {
         activeProvider: this.activeProvider,
-        providers: Array.from(this.providers.values()),
+        providers: providersForConfig,
         lastUpdated: new Date().toISOString()
       }
 
@@ -387,6 +406,110 @@ export class LLMManager {
       }
     } catch (error) {
       console.error('Failed to refresh Ollama models:', error)
+    }
+  }
+
+  // Secure Credential Management
+  public async storeApiKey(providerName: string, apiKey: string): Promise<boolean> {
+    try {
+      await this.credentialManager.storeLLMApiKey(providerName, apiKey)
+      
+      // Update the provider in memory
+      const provider = this.providers.get(providerName)
+      if (provider) {
+        provider.apiKey = apiKey
+        await this.saveConfig()
+      }
+      
+      return true
+    } catch (error) {
+      console.error(`Failed to store API key for ${providerName}:`, error)
+      return false
+    }
+  }
+
+  public async getApiKey(providerName: string): Promise<string | null> {
+    try {
+      return await this.credentialManager.getLLMApiKey(providerName)
+    } catch (error) {
+      console.error(`Failed to retrieve API key for ${providerName}:`, error)
+      return null
+    }
+  }
+
+  public async deleteApiKey(providerName: string): Promise<boolean> {
+    try {
+      const success = await this.credentialManager.deleteLLMApiKey(providerName)
+      
+      // Update the provider in memory
+      const provider = this.providers.get(providerName)
+      if (provider) {
+        provider.apiKey = ''
+        await this.saveConfig()
+      }
+      
+      return success
+    } catch (error) {
+      console.error(`Failed to delete API key for ${providerName}:`, error)
+      return false
+    }
+  }
+
+  public async listStoredApiKeys(): Promise<string[]> {
+    try {
+      return await this.credentialManager.listLLMApiKeys()
+    } catch (error) {
+      console.error('Failed to list stored API keys:', error)
+      return []
+    }
+  }
+
+  public async clearAllCredentials(): Promise<void> {
+    try {
+      await this.credentialManager.clearAllCredentials()
+      
+      // Clear API keys from all providers in memory
+      for (const provider of this.providers.values()) {
+        provider.apiKey = ''
+      }
+      
+      await this.saveConfig()
+    } catch (error) {
+      console.error('Failed to clear all credentials:', error)
+    }
+  }
+
+  public getSecurityInfo(): {
+    encryptionAvailable: boolean
+    storageMethod: 'os-keychain' | 'encrypted-file' | 'none'
+    isSecure: boolean
+  } {
+    return this.credentialManager.getSecurityInfo()
+  }
+
+  // Enhanced API key validation with secure storage
+  public async validateAndStoreApiKey(providerName: string, apiKey: string): Promise<{ valid: boolean; error?: string }> {
+    try {
+      // First validate the API key
+      const isValid = await this.validateApiKey(providerName, apiKey)
+      
+      if (!isValid) {
+        return { valid: false, error: 'Invalid API key' }
+      }
+
+      // If valid, store it securely
+      const stored = await this.storeApiKey(providerName, apiKey)
+      
+      if (!stored) {
+        return { valid: true, error: 'API key is valid but failed to store securely' }
+      }
+
+      return { valid: true }
+    } catch (error) {
+      return { 
+        valid: false, 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      }
     }
   }
 }

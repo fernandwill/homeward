@@ -416,3 +416,32 @@ ipcMain.handle('llm:getProviderModels', (_, providerName: string) => {
 ipcMain.handle('llm:refreshOllamaModels', async () => {
   return await llmManager.refreshOllamaModels()
 })
+
+// Secure credential management
+ipcMain.handle('llm:storeApiKey', async (_, providerName: string, apiKey: string) => {
+  return await llmManager.storeApiKey(providerName, apiKey)
+})
+
+ipcMain.handle('llm:getApiKey', async (_, providerName: string) => {
+  return await llmManager.getApiKey(providerName)
+})
+
+ipcMain.handle('llm:deleteApiKey', async (_, providerName: string) => {
+  return await llmManager.deleteApiKey(providerName)
+})
+
+ipcMain.handle('llm:listStoredApiKeys', async () => {
+  return await llmManager.listStoredApiKeys()
+})
+
+ipcMain.handle('llm:clearAllCredentials', async () => {
+  return await llmManager.clearAllCredentials()
+})
+
+ipcMain.handle('llm:getSecurityInfo', () => {
+  return llmManager.getSecurityInfo()
+})
+
+ipcMain.handle('llm:validateAndStoreApiKey', async (_, providerName: string, apiKey: string) => {
+  return await llmManager.validateAndStoreApiKey(providerName, apiKey)
+})

@@ -97,4 +97,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
   validateApiKey: (providerName: string, apiKey: string) => ipcRenderer.invoke('llm:validateApiKey', providerName, apiKey),
   getProviderModels: (providerName: string) => ipcRenderer.invoke('llm:getProviderModels', providerName),
   refreshOllamaModels: () => ipcRenderer.invoke('llm:refreshOllamaModels'),
+  
+  // Secure credential management
+  storeApiKey: (providerName: string, apiKey: string) => ipcRenderer.invoke('llm:storeApiKey', providerName, apiKey),
+  getApiKey: (providerName: string) => ipcRenderer.invoke('llm:getApiKey', providerName),
+  deleteApiKey: (providerName: string) => ipcRenderer.invoke('llm:deleteApiKey', providerName),
+  listStoredApiKeys: () => ipcRenderer.invoke('llm:listStoredApiKeys'),
+  clearAllCredentials: () => ipcRenderer.invoke('llm:clearAllCredentials'),
+  getSecurityInfo: () => ipcRenderer.invoke('llm:getSecurityInfo'),
+  validateAndStoreApiKey: (providerName: string, apiKey: string) => ipcRenderer.invoke('llm:validateAndStoreApiKey', providerName, apiKey),
 })

@@ -56,6 +56,15 @@ export interface ElectronAPI {
   validateApiKey: (providerName: string, apiKey: string) => Promise<boolean>
   getProviderModels: (providerName: string) => Promise<any[]>
   refreshOllamaModels: () => Promise<void>
+  
+  // Secure credential management
+  storeApiKey: (providerName: string, apiKey: string) => Promise<boolean>
+  getApiKey: (providerName: string) => Promise<string | null>
+  deleteApiKey: (providerName: string) => Promise<boolean>
+  listStoredApiKeys: () => Promise<string[]>
+  clearAllCredentials: () => Promise<void>
+  getSecurityInfo: () => Promise<SecurityInfo>
+  validateAndStoreApiKey: (providerName: string, apiKey: string) => Promise<{ valid: boolean; error?: string }>
 }
 
 export interface FileNode {
@@ -115,6 +124,12 @@ export interface LLMModel {
     input: number
     output: number
   }
+}
+
+export interface SecurityInfo {
+  encryptionAvailable: boolean
+  storageMethod: 'os-keychain' | 'encrypted-file' | 'none'
+  isSecure: boolean
 }
 
 declare global {
